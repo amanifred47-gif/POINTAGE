@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pointage ONEMART LOGISTIQUE</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bleu:#1f4e79; --bleu2:#2c6cb0; --vert:#1f6f3d; --orange:#c47f17;
+    --violet:#6b4f9e; --rouge:#b02525; --gris:#66788a; --fond:#eef1f4;
+  }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; background:var(--fond); color:#1f2d3d; }
+
+  header { background:var(--bleu); color:#fff; padding:14px 16px; text-align:center; }
+  header .t1 { font-size:17px; font-weight:bold; }
+  header .t2 { font-size:12px; opacity:.85; }
+
+  .wrap { max-width:480px; margin:0 auto; padding:14px; }
+
+  .horloge { text-align:center; margin:10px 0; }
+  .horloge .h { font-size:40px; font-weight:bold; color:var(--bleu); }
+  .horloge .d { font-size:13px; color:var(--gris); text-transform:capitalize; }
+  .horloge .s { font-size:12px; color:var(--orange); font-weight:bold; margin-top:4px; display:none; }
+
+  .gps-statut { padding:10px; border-radius:10px; text-align:center; font-size:13px; margin-bottom:10px; font-weight:bold; }
+  .gps-attente { background:#fff3d6; color:#8a6d1e; }
+  .gps-ok { background:#e3f4e8; color:var(--vert); }
+  .gps-loin { background:#fbe4e4; color:var(--rouge); }
+  .gps-refus { background:#fbe4e4; color:var(--rouge); }
+
+  .panneau { background:#fff; border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+
+  video { width:100%; border-radius:10px; background:#000; aspect-ratio:4/3; object-fit:cover; display:block; }
+  canvas { display:none; }
+  .cam-info { font-size:12px; color:var(--gris); text-align:center; margin-top:6px; }
+
+  .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
+  .actions button { padding:14px 6px; border:none; border-radius:10px; font-size:14px; font-weight:bold; color:#fff; cursor:pointer; }
+  .a-arr { background:var(--vert); } .a-dep { background:var(--bleu2); }
+  .a-pau { background:var(--orange); } .a-ret { background:var(--violet); }
+  .actions button.sel { outline:3px solid #1f2d3d; }
+
+  .liens { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .liens button { padding:10px; border-radius:8px; border:none; font-size:13px; font-weight:bold; cursor:pointer; }
+  .l-insc { background:var(--fond); color:var(--gris); border:2px dashed var(--gris); }
+  .l-oubli { background:#fff; color:var(--bleu); text-decoration:underline; }
+
+  .consigne { text-align:center; font-size:13px; color:var(--gris); min-height:18px; margin-bottom:6px; }
+  .code-aff { text-align:center; font-size:28px; letter-spacing:10px; color:var(--bleu); font-weight:bold; height:38px; }
+
+  .clavier { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .clavier button { padding:16px; font-size:20px; font-weight:bold; border:none; border-radius:10px; background:var(--fond); cursor:pointer; }
+  .clavier .c { background:#f3dede; color:var(--rouge); } .clavier .ok { background:var(--vert); color:#fff; }
+
+  .message { margin-top:12px; padding:14px; border-radius:10px; text-align:center; font-size:14px; line-height:1.5; display:none; }
+  .message.show { display:block; }
+  .m-ok{background:#e3f4e8;color:var(--vert);} .m-ret{background:#fdeede;color:var(--orange);}
+  .m-pau{background:#f1ebf9;color:var(--violet);} .m-dep{background:#e6eef7;color:var(--bleu);}
+  .m-err{background:#fbe4e4;color:var(--rouge);}
+  .message .n { font-size:17px; font-weight:bold; display:block; margin-bottom:4px; }
+
+  .modale { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center; z-index:50; padding:16px; }
+  .modale.show { display:flex; }
+  .boite { background:#fff; border-radius:14px; padding:20px; width:100%; max-width:360px; }
+  .boite h3 { color:var(--bleu); margin-bottom:10px; }
+  .boite p { font-size:13px; color:var(--gris); margin-bottom:10px; }
+  .boite input { width:100%; padding:12px; font-size:15px; border:1px solid #c4cdd6; border-radius:8px; margin-bottom:10px; }
+  .boite .b { display:flex; gap:8px; }
+  .boite .b button { flex:1; padding:12px; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; }
+  .b-gris{background:var(--gris);color:#fff;} .b-vert{background:var(--vert);color:#fff;} .b-bleu{background:var(--bleu);color:#fff;}
+  .err { color:var(--rouge); font-size:13px; margin-bottom:8px; display:none; }
+  .code-gen { text-align:center; font-size:36px; font-weight:bold; color:var(--vert); letter-spacing:6px; margin:10px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="t1">ONEMART LOGISTIQUE</div>
+  <div class="t2">Pointage du personnel</div>
+</header>
+
+<div class="wrap">
+  <div class="horloge">
+    <div class="h" id="hHeure">--:--:--</div>
+    <div class="d" id="hDate">—</div>
+    <div class="s" id="hSamedi">Samedi : journée entière en heures supplémentaires</div>
+  </div>
+
+  <div class="gps-statut gps-attente" id="gpsStatut">Vérification de ta position en cours…</div>
+
+  <div class="panneau">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div class="cam-info" id="camInfo">La caméra prend une photo à chaque pointage (preuve).</div>
+  </div>
+
+  <div class="panneau">
+    <div class="actions">
+      <button class="a-arr" data-action="arrivee">ARRIVÉE</button>
+      <button class="a-dep" data-action="depart">DÉPART</button>
+      <button class="a-pau" data-action="pause">SORTIE PAUSE</button>
+      <button class="a-ret" data-action="retour">RETOUR PAUSE</button>
+    </div>
+
+    <div class="liens">
+      <button class="l-insc" id="btnInscription">PREMIÈRE FOIS ? S'inscrire et recevoir son code</button>
+      <button class="l-oubli" id="btnOubli">Code oublié ? Le retrouver avec son nom</button>
+    </div>
+
+    <div class="consigne" id="consigne">Sélectionne une action ci-dessus.</div>
+    <div class="code-aff" id="codeAff"></div>
+    <div class="clavier">
+      <button data-t="1">1</button><button data-t="2">2</button><button data-t="3">3</button>
+      <button data-t="4">4</button><button data-t="5">5</button><button data-t="6">6</button>
+      <button data-t="7">7</button><button data-t="8">8</button><button data-t="9">9</button>
+      <button class="c" data-t="C">←</button><button data-t="0">0</button><button class="ok" data-t="OK">OK</button>
+    </div>
+
+    <div class="message" id="message"></div>
+  </div>
+
+  <div style="text-align:center; font-size:11px; color:var(--gris); padding:10px;">
+    Le pointage n'est possible qu'à l'intérieur des locaux d'ONEMART LOGISTIQUE.
+  </div>
+</div>
+
+<!-- MODALE INSCRIPTION -->
+<div class="modale" id="mInscription">
+  <div class="boite">
+    <h3>Première inscription</h3>
+    <p>Saisis ton nom complet. Un code à 4 chiffres te sera attribué.</p>
+    <div class="err" id="errInsc"></div>
+    <input type="text" id="nomInsc" placeholder="Ton nom complet" autocomplete="off">
+    <div id="zoneCodeGen" style="display:none">
+      <div style="font-size:13px;color:var(--gris);text-align:center">Ton code :</div>
+      <div class="code-gen" id="codeGen"></div>
+      <div style="font-size:12px;color:var(--rouge);text-align:center;font-weight:bold">Retiens bien ce code !</div>
+    </div>
+    <div class="b">
+      <button class="b-gris" id="annulInsc">Annuler</button>
+      <button class="b-vert" id="validInsc">M'inscrire</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE CODE OUBLIÉ -->
+<div class="modale" id="mOubli">
+  <div class="boite">
+    <h3>Code oublié</h3>
+    <p>Saisis ton nom exact pour retrouver ton code.</p>
+    <div class="err" id="errOubli"></div>
+    <input type="text" id="nomOubli" placeholder="Ton nom complet" autocomplete="off">
+    <div id="zoneCodeRetr" style="display:none; text-align:center; margin-bottom:10px">
+      <div style="font-size:13px;color:var(--gris)">Ton code :</div>
+      <div style="font-size:32px;font-weight:bold;color:var(--bleu);letter-spacing:6px" id="codeRetr"></div>
+    </div>
+    <div class="b">
+      <button class="b-gris" id="fermerOubli">Fermer</button>
+      <button class="b-bleu" id="chercherOubli">Rechercher</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONFIGURATION ONEMART ============ */
+const ONEMART_LAT = 5.3792998;
+const ONEMART_LON = -3.9922082;
+const RAYON_METRES = 100;           // rayon autorisé autour du bureau
+/* =============================================== */
+
+const CLE = {
+  employes:'onemart_gps_employes',
+  pointages:'onemart_gps_pointages',
+  reglages:'onemart_gps_reglages'
+};
+function lire(c,d){ try{const v=localStorage.getItem(c);return v?JSON.parse(v):d;}catch(e){return d;} }
+function ecrire(c,v){ localStorage.setItem(c,JSON.stringify(v)); }
+if(!localStorage.getItem(CLE.reglages)) ecrire(CLE.reglages,{debut:'08:00',marge:15,fin:'17:00',limitePause:'16:00'});
+if(!localStorage.getItem(CLE.employes)) ecrire(CLE.employes,[]);
+if(!localStorage.getItem(CLE.pointages)) ecrire(CLE.pointages,[]);
+
+const JOURS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function dc(n){return n<10?'0'+n:''+n;}
+function dateISO(d){return d.getFullYear()+'-'+dc(d.getMonth()+1)+'-'+dc(d.getDate());}
+function hHM(d){return dc(d.getHours())+':'+dc(d.getMinutes());}
+function hHMS(d){return hHM(d)+':'+dc(d.getSeconds());}
+function minMinuit(s){const[h,m]=s.split(':');return +h*60+ +m;}
+function formatDuree(min){if(!min||min<=0)return'0';const h=Math.floor(min/60),m=Math.round(min%60);return(h>0?h+'h':'')+(m>0?dc(m)+'min':(h>0?'':'0'));}
+
+/* ============ HORLOGE ============ */
+function tic(){
+  const d=new Date();
+  hHeure.textContent=hHMS(d);
+  hDate.textContent=JOURS[d.getDay()]+' '+d.getDate()+' '+MOIS[d.getMonth()]+' '+d.getFullYear();
+  hSamedi.style.display=d.getDay()===6?'block':'none';
+}
+const hHeure=document.getElementById('hHeure'),hDate=document.getElementById('hDate'),hSamedi=document.getElementById('hSamedi');
+setInterval(tic,1000); tic();
+
+/* ============ GPS ============ */
+let positionOK=false, distanceActuelle=null;
+const gpsStatut=document.getElementById('gpsStatut');
+
+function distanceMetres(lat1,lon1,lat2,lon2){
+  const R=6371000, toRad=x=>x*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function surveillerGPS(){
+  if(!('geolocation' in navigator)){
+    gpsStatut.className='gps-statut gps-refus';
+    gpsStatut.textContent='GPS non disponible sur cet appareil.';
+    return;
+  }
+  navigator.geolocation.watchPosition(
+    pos=>{
+      const d=distanceMetres(pos.coords.latitude,pos.coords.longitude,ONEMART_LAT,ONEMART_LON);
+      distanceActuelle=Math.round(d);
+      if(d<=RAYON_METRES){
+        positionOK=true;
+        gpsStatut.className='gps-statut gps-ok';
+        gpsStatut.textContent='✓ Tu es à ONEMART ('+distanceActuelle+' m). Pointage autorisé.';
+      } else {
+        positionOK=false;
+        gpsStatut.className='gps-statut gps-loin';
+        gpsStatut.textContent='✗ Tu es trop loin du bureau ('+distanceActuelle+' m). Pointage impossible.';
+      }
+    },
+    err=>{
+      positionOK=false;
+      gpsStatut.className='gps-statut gps-refus';
+      if(err.code===1) gpsStatut.textContent='Localisation refusée. Autorise le GPS pour pouvoir pointer.';
+      else gpsStatut.textContent='Position introuvable. Active le GPS et réessaie.';
+    },
+    { enableHighAccuracy:true, maximumAge:10000, timeout:15000 }
+  );
+}
+surveillerGPS();
+
+/* ============ CAMÉRA ============ */
+const video=document.getElementById('video'), canvas=document.getElementById('canvas'), camInfo=document.getElementById('camInfo');
+let cameraOK=false;
+async function ouvrirCamera(){
+  try{
+    const flux=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+    video.srcObject=flux; cameraOK=true;
+  }catch(e){
+    cameraOK=false;
+    camInfo.textContent='Caméra indisponible. Autorise la caméra pour la preuve photo.';
+  }
+}
+ouvrirCamera();
+
+function capturerPhoto(){
+  if(!cameraOK) return null;
+  try{
+    const w=video.videoWidth||320, h=video.videoHeight||240;
+    canvas.width=w; canvas.height=h;
+    canvas.getContext('2d').drawImage(video,0,0,w,h);
+    return canvas.toDataURL('image/jpeg',0.5);  // base64 compressé
+  }catch(e){ return null; }
+}
+
+/* ============ POINTAGE ============ */
+let action=null, code='';
+const consigne=document.getElementById('consigne'), codeAff=document.getElementById('codeAff'), message=document.getElementById('message');
+const LIB={arrivee:'ARRIVÉE',depart:'DÉPART',pause:'SORTIE PAUSE',retour:'RETOUR PAUSE'};
+
+document.querySelectorAll('.actions button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    action=b.getAttribute('data-action');
+    document.querySelectorAll('.actions button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    consigne.textContent='Action : '+LIB[action]+' — tape ton code puis OK.';
+    code=''; majCode();
+  });
+});
+document.querySelectorAll('.clavier button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    const t=b.getAttribute('data-t');
+    if(t==='C') code=code.slice(0,-1);
+    else if(t==='OK'){ valider(); return; }
+    else if(code.length<4) code+=t;
+    majCode();
+  });
+});
+function majCode(){ codeAff.textContent='•'.repeat(code.length); }
+function msg(html,cl){ message.className='message show '+cl; message.innerHTML=html; clearTimeout(msg._t); msg._t=setTimeout(()=>message.className='message',6000); }
+function reset(){ code=''; majCode(); action=null; document.querySelectorAll('.actions button').forEach(x=>x.classList.remove('sel')); consigne.textContent='Sélectionne une action ci-dessus.'; }
+
+function valider(){
+  if(!action){ msg('Choisis d\'abord une action.','m-err'); return; }
+  if(code.length<4){ msg('Tape ton code à 4 chiffres.','m-err'); return; }
+
+  // VÉRIFICATION GPS (anti-triche maison)
+  if(!positionOK){
+    if(distanceActuelle!==null) msg('Pointage refusé : tu es à '+distanceActuelle+' m du bureau.<br>Tu dois être à ONEMART pour pointer.','m-err');
+    else msg('Position non vérifiée. Active le GPS et autorise la localisation.','m-err');
+    reset(); return;
+  }
+
+  const employes=lire(CLE.employes,[]);
+  const emp=employes.find(e=>e.code===code);
+  if(!emp){ msg('Code inconnu. Vois avec l\'administrateur.','m-err'); reset(); return; }
+
+  const reglages=lire(CLE.reglages,{});
+  const now=new Date(), auj=dateISO(now), samedi=now.getDay()===6;
+  let pointages=lire(CLE.pointages,[]);
+  let p=pointages.find(x=>x.code===emp.code&&x.date===auj);
+  const nB='<span class="n">'+emp.nom+'</span>';
+  const photo=capturerPhoto();
+
+  if(action==='arrivee'){
+    if(p){ msg(nB+'Tu as déjà pointé ton arrivée.','m-err'); reset(); return; }
+    const mn=now.getHours()*60+now.getMinutes(), lim=minMinuit(reglages.debut)+ +reglages.marge;
+    const ret=!samedi&&mn>lim, rmin=ret?mn-minMinuit(reglages.debut):0;
+    p={code:emp.code,nom:emp.nom,date:auj,samedi,arrivee:hHMS(now),retard:ret,retardMin:rmin,
+       pauseDebut:null,pauseFin:null,depart:null,gps:distanceActuelle,photos:{}};
+    if(photo)p.photos.arrivee=photo;
+    pointages.push(p); ecrire(CLE.pointages,pointages);
+    if(samedi) msg(nB+'Arrivée (samedi) à '+hHM(now)+'<br>Journée en heures supp.','m-pau');
+    else if(ret) msg(nB+'Arrivée à '+hHM(now)+'<br>En retard de '+rmin+' min.','m-ret');
+    else msg(nB+'Arrivée à '+hHM(now)+'<br>À l\'heure. Bonne journée !','m-ok');
+  } else if(action==='pause'){
+    if(!p){ msg(nB+'Pointe d\'abord ton arrivée.','m-err'); reset(); return; }
+    if(p.pauseDebut){ msg(nB+'Sortie pause déjà pointée.','m-err'); reset(); return; }
+    if(p.depart){ msg(nB+'Tu es déjà parti.','m-err'); reset(); return; }
+    const mn=now.getHours()*60+now.getMinutes();
+    if(mn>=minMinuit(reglages.limitePause)){ msg(nB+'Pause refusée : interdite à partir de '+reglages.limitePause+'.','m-err'); reset(); return; }
+    p.pauseDebut=hHMS(now); if(photo)(p.photos=p.photos||{}).pause=photo; ecrire(CLE.pointages,pointages);
+    msg(nB+'Sortie pause à '+hHM(now)+'<br>N\'oublie pas ton retour.','m-pau');
+  } else if(action==='retour'){
+    if(!p||!p.pauseDebut){ msg(nB+'Pas de sortie pause pointée.','m-err'); reset(); return; }
+    if(p.pauseFin){ msg(nB+'Retour déjà pointé.','m-err'); reset(); return; }
+    p.pauseFin=hHMS(now); if(photo)(p.photos=p.photos||{}).retour=photo; ecrire(CLE.pointages,pointages);
+    const dp=minMinuit(hHM(now))-minMinuit(p.pauseDebut.slice(0,5));
+    msg(nB+'Retour de pause à '+hHM(now)+'<br>Pause : '+formatDuree(dp)+'.','m-pau');
+  } else if(action==='depart'){
+    if(!p){ msg(nB+'Pointe d\'abord ton arrivée.','m-err'); reset(); return; }
+    if(p.depart){ msg(nB+'Départ déjà pointé.','m-err'); reset(); return; }
+    if(p.pauseDebut&&!p.pauseFin){ msg(nB+'Tu es en pause. Pointe ton retour avant.','m-err'); reset(); return; }
+    p.depart=hHMS(now); if(photo)(p.photos=p.photos||{}).depart=photo; ecrire(CLE.pointages,pointages);
+    let trav=0,supp=0; const a=minMinuit(p.arrivee.slice(0,5)),d=minMinuit(p.depart.slice(0,5));
+    let pause=(p.pauseDebut&&p.pauseFin)?minMinuit(p.pauseFin.slice(0,5))-minMinuit(p.pauseDebut.slice(0,5)):0;
+    trav=Math.max(0,(d-a)-pause);
+    if(samedi)supp=trav; else{const f=minMinuit(reglages.fin); if(d>f)supp=d-f;}
+    const ex=supp>0?'<br>Heures supp : '+formatDuree(supp):'';
+    msg(nB+'Départ à '+hHM(now)+'<br>Travaillé : '+formatDuree(trav)+ex+'<br>À demain !','m-dep');
+  }
+  reset();
+}
+
+/* ============ INSCRIPTION ============ */
+function genCode(){
+  const pris=new Set(lire(CLE.employes,[]).map(e=>e.code));
+  if(pris.size>=9000) return null;
+  let c; do{ c=String(Math.floor(1000+Math.random()*9000)); }while(pris.has(c));
+  return c;
+}
+const mInsc=document.getElementById('mInscription'), nomInsc=document.getElementById('nomInsc'),
+      zoneCodeGen=document.getElementById('zoneCodeGen'), errInsc=document.getElementById('errInsc');
+document.getElementById('btnInscription').addEventListener('click',()=>{
+  nomInsc.value=''; nomInsc.disabled=false; zoneCodeGen.style.display='none'; errInsc.style.display='none';
+  const v=document.getElementById('validInsc'); v.textContent="M'inscrire"; v.dataset.etat='saisie';
+  mInsc.classList.add('show'); nomInsc.focus();
+});
+document.getElementById('annulInsc').addEventListener('click',()=>mInsc.classList.remove('show'));
+document.getElementById('validInsc').addEventListener('click',()=>{
+  const v=document.getElementById('validInsc');
+  if(v.dataset.etat==='termine'){ mInsc.classList.remove('show'); return; }
+  const nom=nomInsc.value.trim();
+  if(!nom){ errInsc.textContent='Saisis ton nom.'; errInsc.style.display='block'; return; }
+  const employes=lire(CLE.employes,[]);
+  if(employes.some(e=>e.nom.toLowerCase()===nom.toLowerCase())){ errInsc.textContent='Ce nom est déjà inscrit.'; errInsc.style.display='block'; return; }
+  const c=genCode();
+  if(!c){ errInsc.textContent='Plus de code disponible.'; errInsc.style.display='block'; return; }
+  employes.push({nom,poste:'',code:c}); ecrire(CLE.employes,employes);
+  errInsc.style.display='none'; nomInsc.disabled=true;
+  document.getElementById('codeGen').textContent=c; zoneCodeGen.style.display='block';
+  v.textContent='J\'ai retenu mon code'; v.dataset.etat='termine';
+});
+
+/* ============ CODE OUBLIÉ ============ */
+const mOubli=document.getElementById('mOubli'), nomOubli=document.getElementById('nomOubli'),
+      zoneCodeRetr=document.getElementById('zoneCodeRetr'), errOubli=document.getElementById('errOubli');
+document.getElementById('btnOubli').addEventListener('click',()=>{
+  nomOubli.value=''; zoneCodeRetr.style.display='none'; errOubli.style.display='none'; mOubli.classList.add('show'); nomOubli.focus();
+});
+document.getElementById('fermerOubli').addEventListener('click',()=>mOubli.classList.remove('show'));
+document.getElementById('chercherOubli').addEventListener('click',()=>{
+  const nom=nomOubli.value.trim();
+  const emp=lire(CLE.employes,[]).find(e=>e.nom.toLowerCase()===nom.toLowerCase());
+  if(!emp){ errOubli.textContent='Nom introuvable. Vois avec la RH.'; errOubli.style.display='block'; zoneCodeRetr.style.display='none'; return; }
+  errOubli.style.display='none'; document.getElementById('codeRetr').textContent=emp.code; zoneCodeRetr.style.display='block';
+});
+</script>
+</body>
+</html>
